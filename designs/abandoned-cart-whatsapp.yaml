@@ -1,0 +1,47 @@
+# Design manifest: abandoned-cart nudge on WhatsApp (see ADR-004). Checked by tools/arb_guardrail.py.
+name: Abandoned-cart nudge on WhatsApp
+adr: adr/ADR-004-abandoned-cart-trigger-flink-timer.md
+
+components:
+  - {id: ecommerce_service, type: service}
+  - {id: operational_db, type: operational_db, owner: ecommerce_service, region: me-central-1}
+  - {id: cdc, type: cdc}
+  - {id: kafka, type: stream}
+  - id: flink_abandonment
+    type: service
+    mode: stream
+    justification: cart state at send time decides if the nudge is right or wrong; batch sends to buyers
+    latency_budget_ms: 5000
+  - {id: cdp, type: store, region: me-central-1}
+  - id: rec_engine
+    type: recommender
+    mode: stream
+    justification: consumes cart.abandoned events; reads only precomputed FBT and consent from CDP
+    latency_budget_ms: 5000
+    on_user_path: false
+    fallback: cart-only template when CDP/FBT is unavailable
+    eval:
+      offline: FBT hit-rate@3 on last 30 days of orders
+      online_kpi: cart recovery rate vs 10% holdout; opt-out rate < 0.5%
+      kill_switch: feature flag nudge.abandoned_cart.enabled
+  - id: whatsapp
+    type: channel
+    external: true
+    region: me-central-1          # BSP hosting region
+    sends_to_customer: true
+    consent_check: true           # opt-in + 24 h cap + quiet hours checked in CDP before send
+    generates_content: false
+    approved_templates: true      # Meta-approved AR/EN templates only
+
+flows:
+  - {from: ecommerce_service, to: operational_db, data: [cart rows]}
+  - {from: operational_db, to: cdc, data: [WAL / binlog]}
+  - {from: operational_db, to: ecommerce_service, data: [cart by PK]}
+  - {from: cdc, to: kafka, data: [cart.updated, order.created]}
+  - {from: kafka, to: flink_abandonment, data: [cart.updated, order.created]}
+  - {from: flink_abandonment, to: kafka, data: [cart.abandoned]}
+  - {from: kafka, to: rec_engine, data: [cart.abandoned]}
+  - {from: cdp, to: rec_engine, data: [consent, caps, FBT top-3]}
+  - {from: rec_engine, to: ecommerce_service, data: [cart status check]}
+  - {from: rec_engine, to: whatsapp, data: [phone, first name, cart SKUs], pii: true,
+     lawful_basis: consent, processor_dpa: true}

@@ -43,7 +43,12 @@ def check_design(d):
     for f in d.get("flows", []):
         src, dst = comps.get(f["from"], {}), comps.get(f["to"], {})
         if dst.get("external") and f.get("pii") and not f.get("redacted"):
-            out.append(("R1", f"PII flows {f['from']} -> external {f['to']} without redaction"))
+            # External LLMs never get raw PII; other processors need a lawful basis and a DPA.
+            if dst.get("type") == "llm":
+                out.append(("R1", f"PII flows {f['from']} -> external LLM {f['to']} without redaction"))
+            elif not (f.get("lawful_basis") and f.get("processor_dpa")):
+                out.append(("R1", f"PII flows {f['from']} -> external {f['to']} without redaction "
+                                  "or lawful_basis + processor_dpa"))
         if src.get("type") == "operational_db" and dst.get("type") != "cdc" and f["to"] != src.get("owner"):
             out.append(("R7", f"{f['to']} reads the operational DB directly; use CDC -> Kafka"))
     for cid, c in comps.items():
