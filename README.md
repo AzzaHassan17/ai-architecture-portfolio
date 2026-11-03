@@ -24,6 +24,6 @@ Deliverables from the **AI Architecture Design** course. Case study: *Marketing 
 ## Assignment 2: Use-case flow view (abandoned-cart nudge on WhatsApp)
 
 - Diagram: [Abandoned Cart WhatsApp Flow](diagrams/Abandoned%20Cart%20WhatsApp%20Flow.drawio), with page 1 for the chosen option and page 2 for the rejected one
-- Notes: [assignment-02-abandoned-cart-whatsapp-flow.md](docs/assignment-02-abandoned-cart-whatsapp-flow.md) cover the two paths, the option comparison, the over-engineering check and the latency budget
+- Notes: [assignment-02-abandoned-cart-whatsapp-flow.md](docs/assignment-02-abandoned-cart-whatsapp-flow.md) (half a page): the two paths, the option comparison and the over-engineering check
 - Decision: [ADR-004: Flink event timer + precomputed FBT](adr/ADR-004-abandoned-cart-trigger-flink-timer.md)
 - Design manifest: [designs/abandoned-cart-whatsapp.yaml](designs/abandoned-cart-whatsapp.yaml), which passes the guardrail. Checking this design led to a refinement of rule R1: WhatsApp needs phone numbers, so external messaging processors need a lawful basis + DPA rather than redaction
