@@ -1,0 +1,34 @@
+# Design manifest: LLM campaign copy agent (see ADR-001). Checked by tools/arb_guardrail.py.
+name: Campaign copy agent
+adr: adr/ADR-001-managed-llm-api-vs-self-hosted.md
+
+components:
+  - id: cdp
+    type: store
+    region: me-central-1
+  - id: copy_agent
+    type: agent
+    mode: batch
+    generates_content: true
+    customer_facing: true
+    human_review: true            # P2: marketer approval queue before any send
+    eval:
+      offline: golden set of 300 AR/EN briefs; LLM-judge brand/claims score >= 4/5
+      online_kpi: CTR vs control copy; complaint rate < 0.1%
+      kill_switch: feature flag copy_agent.enabled
+  - id: llm_gateway
+    type: service
+    region: me-central-1
+  - id: llm_api
+    type: llm
+    external: true
+    region: me-central-1          # region-pinned endpoint, no training on our data
+    eval:
+      offline: inherited from copy_agent golden set
+      online_kpi: gateway error rate and token spend per campaign
+      kill_switch: gateway provider allow-list
+
+flows:
+  - {from: cdp, to: copy_agent, data: [segment attributes], pii: false}
+  - {from: copy_agent, to: llm_gateway, data: [prompt], pii: false}
+  - {from: llm_gateway, to: llm_api, data: [redacted prompt], pii: true, redacted: true}

@@ -1,0 +1,20 @@
+name: ARB guardrail
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  guardrail:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Check ADRs and design manifests against principles
+        run: python tools/arb_guardrail.py
+      - name: Self-test - the bad design must trigger every rule
+        run: python tools/arb_guardrail.py --expect-fail tests/bad-design.yaml

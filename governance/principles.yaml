@@ -1,0 +1,41 @@
+# Architecture principles for the Marketing Automation with AI & Agents system.
+# Read by tools/arb_guardrail.py: ADRs may only cite these IDs, and each
+# principle names the automated rule(s) that enforce it in design manifests.
+
+goals:
+  G1: Grow repeat revenue through personalised campaigns (conversion uplift)
+  G2: Keep customer trust and stay PDPL-compliant (zero reportable breaches)
+  G3: Lower marketing cost per conversion
+  G4: Keep checkout and the storefront always available
+  G5: Protect the brand (no off-brand, false or unsafe messages)
+
+principles:
+  P1:
+    name: Privacy by design (PDPL)
+    goal: G2
+    statement: Personal data is minimised, consent-gated and stays in-region. Raw PII never goes to a third-party model.
+    rules: [R1-pii-redaction, R2-data-residency, R3-consent]
+  P2:
+    name: Agents propose, humans approve
+    goal: G5
+    statement: Anything a customer sees that a model generated is human-approved or comes from an approved template.
+    rules: [R4-human-oversight]
+  P3:
+    name: Precompute by default
+    goal: G3
+    statement: Batch or precompute unless real-time changes the business outcome. Real-time paths must state why and carry a latency budget.
+    rules: [R5-realtime-justified]
+  P4:
+    name: No eval, no launch
+    goal: G1
+    statement: Every model or agent ships with an offline eval, an online KPI and a rollback or kill switch.
+    rules: [R6-evals]
+  P5:
+    name: Protect the transactional core
+    goal: G4
+    statement: AI and analytics never query the operational DB. Data leaves it via CDC only, and AI failures degrade to a safe default.
+    rules: [R7-no-opdb-reads, R8-fallback]
+
+# R2: regions where personal data may be stored or processed without a
+# separate cross-border transfer assessment.
+allowed_regions: [me-central-1, me-central-2, ksa-riyadh, uae-dubai]

@@ -1,0 +1,11 @@
+# Deliberately broken design: CI asserts that it triggers every rule R1-R8.
+name: Everything wrong
+components:
+  - {id: operational_db, type: operational_db, owner: ecommerce_service, region: eu-west-1}   # R2
+  - {id: ecommerce_service, type: service}
+  - {id: personaliser, type: llm, external: true, region: us-east-1,                         # R2
+     generates_content: true, customer_facing: true,                                        # R4
+     mode: realtime, on_user_path: true}                                                    # R5, R6, R8
+  - {id: whatsapp_sender, type: service, sends_to_customer: true}                          # R3
+flows:
+  - {from: operational_db, to: personaliser, data: [orders, phone], pii: true}              # R1, R7
